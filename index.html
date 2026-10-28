@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sundorika Beauty Blog</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background-color: #fff5f7;
+  margin: 0;
+}
+
+/* NAVBAR */
+.navbar {
+  background: white;
+  padding: 14px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 3px 10px rgba(0,0,0,.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo { font-size: 24px; font-weight: bold; color: #e91e63; }
+.tagline { font-size: 14px; color: #777; margin-left: 8px; }
+
+.nav-right { display: flex; gap: 8px; align-items: center; }
+
+.navbar input {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.nav-btn {
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: none;
+  background: #e91e63;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nav-btn.outline {
+  background: transparent;
+  border: 1px solid #e91e63;
+  color: #e91e63;
+}
+
+.nav-btn.danger { background: #f44336; }
+
+/* CONTAINER */
+.container {
+  width: 85%;
+  margin: 25px auto;
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,.1);
+}
+
+h1 { text-align: center; color: #e91e63; }
+
+.inputSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+input, textarea {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  min-width: 220px;
+}
+
+textarea {
+  min-height: 120px;
+  width: 100%;
+  max-width: 700px;
+}
+
+.addBtn {
+  background: #e91e63;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+ul { list-style: none; padding: 0; }
+
+li {
+  background: #ffe4ec;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 12px;
+}
+
+.post-header {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.post-header img {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.meta { font-size: 13px; color: #555; }
+
+.actions button {
+  margin-right: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+.edit { background: #4caf50; }
+.delete { background: #f44336; }
+
+.readmore {
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+/* SINGLE POST VIEW */
+.single-post img {
+  width: 100%;
+  max-width: 600px;
+  max-height: 400px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 15px;
+}
+
+.backBtn {
+  background: #777;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- NAV -->
+<nav class="navbar">
+  <div>
+    <span class="logo">Sundorika</span>
+    <span class="tagline">Beauty Blog</span>
+  </div>
+
+  <div class="nav-right">
+    <div id="navAuth">
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Password">
+      <button class="nav-btn" id="loginBtn">Login</button>
+      <button class="nav-btn outline" id="signupBtn">Sign Up</button>
+    </div>
+    <div id="navUser" style="display:none;">
+      <span id="userEmail"></span>
+      <button class="nav-btn danger" id="logoutBtn">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container" id="mainContainer">
+  <h1>💄 Beauty Articles</h1>
+
+  <!-- CREATE POST -->
+  <div class="inputSection">
+    <input type="text" id="title" placeholder="Blog title">
+    <input type="text" id="brand" placeholder="Cosmetic brand">
+    <input type="file" id="image" accept="image/*">
+    <textarea id="content" placeholder="Write your article here..."></textarea>
+    <button class="addBtn" id="publishBtn">Publish</button>
+  </div>
+
+  <!-- LIST -->
+  <ul id="blogList"></ul>
+
+  <!-- SINGLE POST -->
+  <div id="singlePost" style="display:none;"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDy4j4A24jal0c6w6NApA7QFx0t-sie59g",
+  authDomain: "cosmetic-2a6b8.firebaseapp.com",
+  projectId: "cosmetic-2a6b8"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
+let editId = null;
+
+// Auth buttons
+loginBtn.onclick = () => signInWithEmailAndPassword(auth, email.value, password.value).catch(e => alert(e.message));
+signupBtn.onclick = () => createUserWithEmailAndPassword(auth, email.value, password.value).catch(e => alert(e.message));
+logoutBtn.onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, user => {
+  currentUser = user;
+  navAuth.style.display = user ? "none" : "flex";
+  navUser.style.display = user ? "flex" : "none";
+  userEmail.textContent = user?.email || "";
+  loadBlogs();
+});
+
+// IMAGE Resize
+function imageToBase64(file, maxWidth = 600, maxHeight = 400) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.src = reader.result;
+      img.onload = () => {
+        const ratio = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.7));
+      };
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* LOAD LIST */
+async function loadBlogs() {
+  blogList.innerHTML = "";
+  singlePost.style.display = "none";
+  blogList.style.display = "block";
+
+  const snap = await getDocs(collection(db, "blogs"));
+  snap.forEach(d => {
+    const b = d.data();
+    const li = document.createElement("li");
+
+    li.innerHTML = `
+      <div class="post-header">
+        <img src="${b.image || 'https://via.placeholder.com/90'}">
+        <div>
+          <h3>${b.title}</h3>
+          <div class="meta">Brand: ${b.brand} • By ${b.author}</div>
+        </div>
+      </div>
+      <p>${b.content.substring(0,120)}...</p>
+      <button class="readmore">Read More</button>
+    `;
+
+    li.querySelector(".readmore").onclick = () => {
+      location.hash = "post=" + d.id;
+    };
+
+    if (currentUser && b.author === currentUser.email) {
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      const edit = document.createElement("button");
+      edit.textContent = "Edit";
+      edit.className = "edit";
+      edit.onclick = () => {
+        title.value = b.title;
+        brand.value = b.brand;
+        content.value = b.content;
+        editId = d.id;
+      };
+
+      const del = document.createElement("button");
+      del.textContent = "Delete";
+      del.className = "delete";
+      del.onclick = async () => {
+        await deleteDoc(doc(db, "blogs", d.id));
+        loadBlogs();
+      };
+
+      actions.append(edit, del);
+      li.appendChild(actions);
+    }
+
+    blogList.appendChild(li);
+  });
+}
+
+/* SINGLE PAGE */
+async function loadSingle(id) {
+  blogList.style.display = "none";
+  singlePost.style.display = "block";
+
+  const snap = await getDoc(doc(db, "blogs", id));
+  const b = snap.data();
+
+  singlePost.innerHTML = `
+    <button class="backBtn" onclick="location.hash=''">← Back</button>
+    <div class="single-post">
+      <img src="${b.image || 'https://via.placeholder.com/600x400'}">
+      <h2>${b.title}</h2>
+      <div class="meta">Brand: ${b.brand} • By ${b.author}</div>
+      <p>${b.content}</p>
+    </div>
+  `;
+}
+
+/* HASH ROUTING */
+window.addEventListener("hashchange", () => {
+  const id = location.hash.replace("#post=", "");
+  id ? loadSingle(id) : loadBlogs();
+});
+
+/* PUBLISH */
+publishBtn.onclick = async () => {
+  if (!currentUser) { alert("Login required"); return; }
+  if (!title.value || !brand.value || !content.value) { alert("All fields required!"); return; }
+
+  try {
+    const img = image.files[0] ? await imageToBase64(image.files[0]) : 'https://via.placeholder.com/400';
+
+    if (editId) {
+      await updateDoc(doc(db, "blogs", editId), {
+        title: title.value,
+        brand: brand.value,
+        content: content.value,
+        image: img
+      });
+      editId = null;
+    } else {
+      await addDoc(collection(db, "blogs"), {
+        title: title.value,
+        brand: brand.value,
+        content: content.value,
+        image: img,
+        author: currentUser.email,
+        createdAt: serverTimestamp()
+      });
+    }
+
+    title.value = brand.value = content.value = image.value = "";
+    loadBlogs();
+    alert("Post Published Successfully!");
+  } catch (e) { alert(e.message); }
+};
+
+</script>
+</body>
+</html>
